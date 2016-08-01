@@ -1,4 +1,14 @@
 <resources>
     <string name="app_name">WeiboXposed</string>
     <string name="module_desc">微博修改 by 加大号的猫</string>
+    <string name="title_activity_settings">设置</string>
+
+    <!-- Strings related to Settings -->
+
+    <string name="pref_title_switch_remove_mode">使用实验性移除方式</string>
+    <string name="pref_description_switch_remove_mode_on">将采用新的微博移除方式，会留下较为明显的空白。如果您不需要查看分组微博，可禁用此功能
+    </string>
+    <string name="pref_description_switch_remove_mode_off">将采用基于数据的移除方式，可能影响分组微博，导致无法正常刷新。
+    </string>
+    <string name="restart_weibo">配置已保存，强行停止微博或重启设备后生效</string>
 </resources>
