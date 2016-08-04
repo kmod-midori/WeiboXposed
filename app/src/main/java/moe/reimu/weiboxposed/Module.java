@@ -38,6 +38,21 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 				new XResources.DimensionReplacement(0, TypedValue.COMPLEX_UNIT_PX));
 	}
 
+	public boolean isPromotion(Object mblog) {
+		try {
+			Object promotion = getObjectField(mblog, "promotion");
+
+			if (promotion != null) {
+				String adType = (String)getObjectField(promotion, "adtype");
+				return !"8".equals(adType);
+			}
+		} catch(NoSuchFieldError e) {
+			return false;
+		}
+
+		return false;
+	}
+
 	public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
 		if (!lpparam.packageName.equals("com.sina.weibo"))
 			return;
@@ -75,14 +90,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 
 				for (Object mblog :
 						origResult) {
-					Object promotion = getObjectField(mblog, "promotion");
-					if (promotion != null) {
-						String adType = (String)getObjectField(promotion, "adtype");
-
-						if (adType == null) continue;
-						// Exclude "热门"
-						if (!"8".equals(adType)) continue;
-					}
+					if (isPromotion(mblog)) continue;
 					result.add(mblog);
 				}
 
@@ -101,21 +109,14 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 				Object view = param.getResult();
 
 				Object status;
-				Object promotion;
 				try	{
 					status = getObjectField(view, "d");
-					promotion = getObjectField(status, "promotion");
 				} catch (NoSuchFieldError e) {
 					return;
 				}
 
-				if (promotion != null) {
-					String adType = (String)getObjectField(promotion, "adtype");
-
-					// Exclude "热门"
-					if ("8".equals(adType)) return;
-
-					XposedBridge.log("[WeiboXposed] Removing #" + getObjectField(status, "id") + " with adtype="  + adType + ":" + getObjectField(promotion, "recommend"));
+				if (isPromotion(status)) {
+					XposedBridge.log("[WeiboXposed] Removing #" + getObjectField(status, "id"));
 					TextView tv = new TextView(AndroidAppHelper.currentApplication()); // Empty view
 					param.setResult(tv);
 				}
