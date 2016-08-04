@@ -5,8 +5,8 @@
 
     <!-- Strings related to Settings -->
 
-    <string name="pref_title_switch_remove_mode">使用实验性移除方式（不保证跨版本兼容）</string>
-    <string name="pref_description_switch_remove_mode_on">将采用新的微博移除方式，会留下较为明显的空白。如果您不需要查看分组微博，可禁用此功能
+    <string name="pref_title_switch_remove_mode">使用实验性移除方式</string>
+    <string name="pref_description_switch_remove_mode_on">将采用新的微博移除方式，会留下较为明显的空白。如果您不需要查看分组微博，可禁用此功能（不保证跨版本兼容）
     </string>
     <string name="pref_description_switch_remove_mode_off">将采用基于数据的移除方式，可能影响分组微博，导致无法正常刷新。
     </string>
