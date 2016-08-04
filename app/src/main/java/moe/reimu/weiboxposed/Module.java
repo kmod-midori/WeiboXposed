@@ -18,6 +18,7 @@ import de.robv.android.xposed.IXposedHookInitPackageResources;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XSharedPreferences;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_InitPackageResources.InitPackageResourcesParam;
@@ -28,14 +29,43 @@ import static de.robv.android.xposed.XposedHelpers.getObjectField;
 
 public class Module implements IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedHookZygoteInit {
 	public XSharedPreferences prefs;
+
+	private static String MOD_PACKAGE_NAME = Module.class.getPackage().getName();
+	private static String WB_PACKAGE_NAME = "com.sina.weibo";
+
 	@Override
 	public void handleInitPackageResources(InitPackageResourcesParam resparam) throws Throwable {
-		if (!resparam.packageName.equals("com.sina.weibo"))
+		if (!resparam.packageName.equals(Module.WB_PACKAGE_NAME))
 			return;
 
 		// Disable Special BG touch event by setting width to 0
 		resparam.res.setReplacement("com.sina.weibo", "dimen", "feed_title_specialbg_width",
 				new XResources.DimensionReplacement(0, TypedValue.COMPLEX_UNIT_PX));
+	}
+
+	@Override
+	public void initZygote(StartupParam startupParam) throws Throwable {
+		prefs = new XSharedPreferences(MOD_PACKAGE_NAME, SettingsActivity.PREF_NAME);
+		prefs.makeWorldReadable();
+
+		XposedBridge.log("[WeiboXposed] Pref Init.");
+	}
+
+	@Override
+	public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+		if (lpparam.packageName.equals(WB_PACKAGE_NAME))
+			hookWeibo(lpparam);
+
+		if (lpparam.packageName.equals(MOD_PACKAGE_NAME)) {
+			hookSelf(lpparam);
+		}
+
+	}
+
+	private void hookSelf(final XC_LoadPackage.LoadPackageParam lpparam) {
+		// "Enable" the module
+		findAndHookMethod(MOD_PACKAGE_NAME + ".SettingsActivity", lpparam.classLoader, "isModuleEnabled",
+				XC_MethodReplacement.returnConstant(true));
 	}
 
 	public boolean isPromotion(Object mblog) {
@@ -53,10 +83,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		return false;
 	}
 
-	public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
-		if (!lpparam.packageName.equals("com.sina.weibo"))
-			return;
-
+	private void hookWeibo(final XC_LoadPackage.LoadPackageParam lpparam) {
 		prefs.reload();
 		boolean useExpMethod = prefs.getBoolean("switch_remove_mode", false);
 		XposedBridge.log("[WeiboXposed] App Weibo Loaded");
@@ -157,13 +184,5 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 				layout.setVisibility(View.VISIBLE);
 			}
 		});
-	}
-
-	@Override
-	public void initZygote(StartupParam startupParam) throws Throwable {
-		prefs = new XSharedPreferences(Module.class.getPackage().getName(), SettingsActivity.PREF_NAME);
-		prefs.makeWorldReadable();
-
-		XposedBridge.log("[WeiboXposed] Pref Init.");
 	}
 }

@@ -5,10 +5,11 @@
 
     <!-- Strings related to Settings -->
 
-    <string name="pref_title_switch_remove_mode">使用实验性移除方式</string>
+    <string name="pref_title_switch_remove_mode">使用实验性移除方式（不保证跨版本兼容）</string>
     <string name="pref_description_switch_remove_mode_on">将采用新的微博移除方式，会留下较为明显的空白。如果您不需要查看分组微博，可禁用此功能
     </string>
     <string name="pref_description_switch_remove_mode_off">将采用基于数据的移除方式，可能影响分组微博，导致无法正常刷新。
     </string>
     <string name="restart_weibo">配置已保存，强行停止微博或重启设备后生效</string>
+    <string name="module_not_enabled">无法正常调用Xposed框架的功能，请确认Xposed已经加载且此模块已启用。如果问题仍然存在，请尝试禁用并重新启用此模块。</string>
 </resources>
