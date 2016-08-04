@@ -24,6 +24,7 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_InitPackageResources.InitPackageResourcesParam;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
+import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
 
@@ -48,7 +49,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		prefs = new XSharedPreferences(MOD_PACKAGE_NAME, SettingsActivity.PREF_NAME);
 		prefs.makeWorldReadable();
 
-		XposedBridge.log("[WeiboXposed] Pref Init.");
+		log("[WeiboXposed] Pref Init.");
 	}
 
 	@Override
@@ -70,14 +71,26 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 
 	public boolean isPromotion(Object mblog) {
 		try {
+			Object buttons = getObjectField(mblog, "buttons");
 			Object promotion = getObjectField(mblog, "promotion");
+
+			String scheme = (String)getObjectField(mblog, "scheme");
+
+			if (buttons != null) {
+				log("[WeiboXposed] " + scheme + " detected as promotion: buttons");
+				return true;
+			}
 
 			if (promotion != null) {
 				String adType = (String)getObjectField(promotion, "adtype");
-				return !"8".equals(adType);
+				if (!"8".equals(adType)) {
+					log("[WeiboXposed] " + scheme + " detected as promotion: adtype");
+					return true;
+				}
 			}
+
 		} catch(NoSuchFieldError e) {
-			return false;
+			log("[WiboXposed] " + e.getMessage());
 		}
 
 		return false;
@@ -86,8 +99,8 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 	private void hookWeibo(final XC_LoadPackage.LoadPackageParam lpparam) {
 		prefs.reload();
 		boolean useExpMethod = prefs.getBoolean("switch_remove_mode", false);
-		XposedBridge.log("[WeiboXposed] App Weibo Loaded");
-		XposedBridge.log("[WeiboXposed] Remove Mode: " + useExpMethod);
+		log("[WeiboXposed] App Weibo Loaded");
+		log("[WeiboXposed] Remove Mode: " + useExpMethod);
 
 		XC_MethodHook callbackCancel = new XC_MethodHook() {
 			@Override
@@ -117,7 +130,9 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 
 				for (Object mblog :
 						origResult) {
-					if (isPromotion(mblog)) continue;
+					if (isPromotion(mblog)) {
+						log("[WeiboXposed][DATA] Removing promotion.");
+					}
 					result.add(mblog);
 				}
 
@@ -143,7 +158,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 				}
 
 				if (isPromotion(status)) {
-					XposedBridge.log("[WeiboXposed] Removing #" + getObjectField(status, "id"));
+					log("[WeiboXposed][VIEW] Removing promotion.");
 					TextView tv = new TextView(AndroidAppHelper.currentApplication()); // Empty view
 					param.setResult(tv);
 				}
