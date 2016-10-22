@@ -34,6 +34,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 
 	private static String MOD_PACKAGE_NAME = Module.class.getPackage().getName();
 	private static String WB_PACKAGE_NAME = "com.sina.weibo";
+	private boolean remove_hot = false;
 
 	@Override
 	public void handleInitPackageResources(InitPackageResourcesParam resparam) throws Throwable {
@@ -84,9 +85,13 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 
 			if (promotion != null) {
 				String adType = (String)getObjectField(promotion, "adtype");
-				if (!"8".equals(adType)) {
-					log(scheme + " detected as promotion: adtype");
+				log(scheme + " detected as promotion: adtype");
+				if(remove_hot) {
 					return true;
+				} else {
+					if (!"8".equals(adType)) {
+						return true;
+					}
 				}
 			}
 
@@ -204,7 +209,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		prefs.reload();
 
 		log("App Weibo Loaded");
-
+		remove_hot = prefs.getBoolean("remove_hot", false);
 		hookAD(lpparam);
 
 		hookNightMode(lpparam);
