@@ -1,7 +1,10 @@
 package moe.reimu.weiboxposed;
 
+import android.app.Activity;
 import android.app.AndroidAppHelper;
+import android.content.Intent;
 import android.content.res.XResources;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.View;
@@ -11,6 +14,8 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,7 +29,7 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_InitPackageResources.InitPackageResourcesParam;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-import static de.robv.android.xposed.XposedBridge.log;
+import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
 
@@ -49,7 +54,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		prefs = new XSharedPreferences(MOD_PACKAGE_NAME, SettingsActivity.PREF_NAME);
 		prefs.makeWorldReadable();
 
-		log("[WeiboXposed] Pref Init.");
+		log("Pref Init");
 	}
 
 	@Override
@@ -77,41 +82,73 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 			String scheme = (String)getObjectField(mblog, "scheme");
 
 			if (buttons != null) {
-				log("[WeiboXposed] " + scheme + " detected as promotion: buttons");
+				log(scheme + " detected as promotion: buttons");
 				return true;
 			}
 
 			if (promotion != null) {
 				String adType = (String)getObjectField(promotion, "adtype");
 				if (!"8".equals(adType)) {
-					log("[WeiboXposed] " + scheme + " detected as promotion: adtype");
+					log(scheme + " detected as promotion: adtype");
 					return true;
 				}
 			}
 
 		} catch(NoSuchFieldError e) {
-			log("[WiboXposed] " + e.getMessage());
+			log(e.getMessage());
 		}
 
 		return false;
 	}
 
-	private void hookWeibo(final XC_LoadPackage.LoadPackageParam lpparam) {
-		prefs.reload();
-		boolean useExpMethod = prefs.getBoolean("switch_remove_mode", false);
-		log("[WeiboXposed] App Weibo Loaded");
-		log("[WeiboXposed] Remove Mode: " + useExpMethod);
+	private void log(String text) {
+		XposedBridge.log("[WeiboXposed] " + text);
+	}
 
-		XC_MethodHook callbackCancel = new XC_MethodHook() {
-			@Override
-			protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-				param.setResult(null);
+	XC_MethodHook removeAD_Old = new XC_MethodHook() {
+		@Override
+		protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+			ArrayList<Object> origResult = (ArrayList<Object>)param.getResult();
+			ArrayList<Object> result = new ArrayList<>();
+
+			for (Object mblog :
+					origResult) {
+				if (isPromotion(mblog)) {
+					log("[DATA] Removing promotion.");
+				}
+				result.add(mblog);
 			}
-		};
 
-		/**
-		 * Remove AD
-		 */
+			param.setResult(result);
+		}
+	};
+
+	XC_MethodHook removeAD_New = new XC_MethodHook() {
+		@Override
+		protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+			Object view = param.getResult();
+
+			Object status;
+			try	{
+				status = getObjectField(view, "d");
+			} catch (NoSuchFieldError e) {
+				return;
+			}
+
+			if (isPromotion(status)) {
+				log("[VIEW] Removing promotion.");
+				TextView tv = new TextView(AndroidAppHelper.currentApplication()); // Empty view
+				param.setResult(tv);
+			}
+		}
+	};
+
+	XC_MethodHook callbackCancel = XC_MethodReplacement.returnConstant(null);
+
+	private void hookAD(final XC_LoadPackage.LoadPackageParam lpparam) {
+		boolean useExpMethod = prefs.getBoolean("switch_remove_mode", false);
+		log("Remove Mode: " + useExpMethod);
+
 		final String LIST_BASE = "com.sina.weibo.models.MBlogListBaseObject";
 		findAndHookMethod(LIST_BASE, lpparam.classLoader, "setTrends", List.class, callbackCancel);
 		findAndHookMethod(LIST_BASE, lpparam.classLoader, "getTrends", new XC_MethodHook() {
@@ -122,49 +159,6 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		});
 		findAndHookMethod(LIST_BASE, lpparam.classLoader, "insetTrend", callbackCancel);
 
-		XC_MethodHook removeAD_Old = new XC_MethodHook() {
-			@Override
-			protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-				ArrayList<Object> origResult = (ArrayList<Object>)param.getResult();
-				ArrayList<Object> result = new ArrayList<>();
-
-				for (Object mblog :
-						origResult) {
-					if (isPromotion(mblog)) {
-						log("[WeiboXposed][DATA] Removing promotion.");
-					}
-					result.add(mblog);
-				}
-
-				param.setResult(result);
-			}
-		};
-
-		XC_MethodHook removeAD_New = new XC_MethodHook() {
-			@Override
-			protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-				/*
-				    .param p1, "position"    # I
-    				.param p2, "convertView"    # Landroid/view/View;
-    				.param p3, "parent"    # Landroid/view/ViewGroup;
-				 */
-				Object view = param.getResult();
-
-				Object status;
-				try	{
-					status = getObjectField(view, "d");
-				} catch (NoSuchFieldError e) {
-					return;
-				}
-
-				if (isPromotion(status)) {
-					log("[WeiboXposed][VIEW] Removing promotion.");
-					TextView tv = new TextView(AndroidAppHelper.currentApplication()); // Empty view
-					param.setResult(tv);
-				}
-			}
-		};
-
 		if (useExpMethod) {
 			findAndHookMethod("com.sina.weibo.feed.HomeListActivity$o", lpparam.classLoader, "getView",
 					int.class, android.view.View.class, android.view.ViewGroup.class, removeAD_New);
@@ -172,11 +166,9 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 			findAndHookMethod(LIST_BASE, lpparam.classLoader, "getStatuses", removeAD_Old);
 			findAndHookMethod(LIST_BASE, lpparam.classLoader, "getStatusesCopy", removeAD_Old);
 		}
+	}
 
-
-		/**
-		 * Force enable night mode
-		 */
+	private void hookNightMode(final XC_LoadPackage.LoadPackageParam lpparam) {
 		findAndHookMethod("com.sina.weibo.models.ThemeList", lpparam.classLoader, "initFromJsonObject", JSONObject.class, new XC_MethodHook() {
 			@Override
 			protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -199,5 +191,73 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 				layout.setVisibility(View.VISIBLE);
 			}
 		});
+	}
+
+	private void hookBrowser(final XC_LoadPackage.LoadPackageParam lpparam) {
+		final String EXTRAS_KEY = "com_sina_weibo_weibobrowser_url";
+		findAndHookMethod(Activity.class, "startActivityForResult", Intent.class, int.class, Bundle.class, new XC_MethodHook() {
+			@Override
+			protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+				Intent intent = (Intent)param.args[0];
+				if (intent.getBooleanExtra(MOD_PACKAGE_NAME, false)) {
+					log("[Browser] Loop detected, skipping");
+					return;
+				}
+
+				Bundle extras = intent.getExtras();
+				if (extras == null) return;
+
+				Uri url;
+				log("extras" + extras.toString());
+				String urlStr = extras.getString(EXTRAS_KEY);
+
+				if (urlStr == null || "".equals(urlStr)) {
+					url = intent.getData();
+					if (url == null) return;
+					log("origUrl " + url.toString());
+					if (url.getScheme().equals("sinaweibo")) {
+						String tmpUrl = url.getQueryParameter("url");
+						if (tmpUrl == null) {
+							tmpUrl = url.getQueryParameter("showurl");
+						}
+						if (tmpUrl == null) return;
+						url = Uri.parse(tmpUrl);
+					}
+
+					if (!url.getScheme().startsWith("http")) return;
+				} else {
+					url = Uri.parse(urlStr);
+				}
+
+				if (url.getHost().endsWith("weibo.com") || url.getHost().endsWith("weibo.cn")) return;
+				param.setResult(null);
+				openUrl(url);
+			}
+		});
+	}
+
+	private void hookWeibo(final XC_LoadPackage.LoadPackageParam lpparam) {
+		prefs.reload();
+
+		log("App Weibo Loaded");
+
+		hookAD(lpparam);
+
+		hookNightMode(lpparam);
+
+		boolean forceBrowser = prefs.getBoolean("force_browser", false);
+		if (forceBrowser) hookBrowser(lpparam);
+
+	}
+
+	private void openUrl(Uri url) {
+		Intent intent = new Intent();
+
+		intent.setAction(Intent.ACTION_VIEW);
+		intent.setData(url);
+		intent.putExtra(MOD_PACKAGE_NAME, true);
+		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+		AndroidAppHelper.currentApplication().startActivity(intent);
 	}
 }

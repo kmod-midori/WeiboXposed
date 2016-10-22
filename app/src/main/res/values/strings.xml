@@ -3,6 +3,18 @@
     <string name="module_desc">微博修改 by 加大号的猫</string>
     <string name="title_activity_settings">设置</string>
 
+    <string-array name="match_activity">
+        <item>com.sina.weibo.feed.HomeListActivity</item>
+        <item>com.sina.weibo.weiyou.DMSingleChatActivity</item>
+        <item>com.sina.weibo.page.NewCardListActivity</item>
+        <item>com.sina.weibo.feed.DetailWeiboActivity</item>
+        <item>com.sina.weibo.feed.HomeListActivity</item>
+    </string-array>
+
+    <string-array name="match_whitelist">
+        <item>card.weibo.com</item>
+    </string-array>
+
     <!-- Strings related to Settings -->
 
     <string name="pref_title_switch_remove_mode">使用实验性移除方式</string>
@@ -10,6 +22,8 @@
     </string>
     <string name="pref_description_switch_remove_mode_off">将采用基于数据的移除方式，可能影响分组微博，导致无法正常刷新。
     </string>
+    <string name="pref_title_force_browser">强制使用外置浏览器</string>
+    <string name="pref_description_force_browser">与“去你大爷的内置浏览器”可能发生冲突，请禁用该模块的“微博”规则。</string>
     <string name="restart_weibo">配置已保存，强行停止微博或重启设备后生效</string>
     <string name="module_not_enabled">无法正常调用Xposed框架的功能，请确认Xposed已经加载且此模块已启用。如果问题仍然存在，请尝试禁用并重新启用此模块。</string>
 </resources>
