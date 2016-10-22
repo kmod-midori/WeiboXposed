@@ -3,18 +3,6 @@
     <string name="module_desc">微博修改 by 加大号的猫</string>
     <string name="title_activity_settings">设置</string>
 
-    <string-array name="match_activity">
-        <item>com.sina.weibo.feed.HomeListActivity</item>
-        <item>com.sina.weibo.weiyou.DMSingleChatActivity</item>
-        <item>com.sina.weibo.page.NewCardListActivity</item>
-        <item>com.sina.weibo.feed.DetailWeiboActivity</item>
-        <item>com.sina.weibo.feed.HomeListActivity</item>
-    </string-array>
-
-    <string-array name="match_whitelist">
-        <item>card.weibo.com</item>
-    </string-array>
-
     <!-- Strings related to Settings -->
 
     <string name="pref_title_switch_remove_mode">使用实验性移除方式</string>

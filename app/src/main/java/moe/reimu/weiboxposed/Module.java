@@ -9,13 +9,10 @@ import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.View;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,7 +26,6 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_InitPackageResources.InitPackageResourcesParam;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
 
@@ -105,40 +101,17 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		XposedBridge.log("[WeiboXposed] " + text);
 	}
 
-	XC_MethodHook removeAD_Old = new XC_MethodHook() {
+	XC_MethodHook removeAD = new XC_MethodHook() {
 		@Override
 		protected void afterHookedMethod(MethodHookParam param) throws Throwable {
 			ArrayList<Object> origResult = (ArrayList<Object>)param.getResult();
-			ArrayList<Object> result = new ArrayList<>();
 
 			for (Object mblog :
 					origResult) {
 				if (isPromotion(mblog)) {
-					log("[DATA] Removing promotion.");
+					log("Removing promotion.");
+					origResult.remove(mblog);
 				}
-				result.add(mblog);
-			}
-
-			param.setResult(result);
-		}
-	};
-
-	XC_MethodHook removeAD_New = new XC_MethodHook() {
-		@Override
-		protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-			Object view = param.getResult();
-
-			Object status;
-			try	{
-				status = getObjectField(view, "d");
-			} catch (NoSuchFieldError e) {
-				return;
-			}
-
-			if (isPromotion(status)) {
-				log("[VIEW] Removing promotion.");
-				TextView tv = new TextView(AndroidAppHelper.currentApplication()); // Empty view
-				param.setResult(tv);
 			}
 		}
 	};
@@ -146,9 +119,6 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 	XC_MethodHook callbackCancel = XC_MethodReplacement.returnConstant(null);
 
 	private void hookAD(final XC_LoadPackage.LoadPackageParam lpparam) {
-		boolean useExpMethod = prefs.getBoolean("switch_remove_mode", false);
-		log("Remove Mode: " + useExpMethod);
-
 		final String LIST_BASE = "com.sina.weibo.models.MBlogListBaseObject";
 		findAndHookMethod(LIST_BASE, lpparam.classLoader, "setTrends", List.class, callbackCancel);
 		findAndHookMethod(LIST_BASE, lpparam.classLoader, "getTrends", new XC_MethodHook() {
@@ -158,14 +128,8 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 			}
 		});
 		findAndHookMethod(LIST_BASE, lpparam.classLoader, "insetTrend", callbackCancel);
-
-		if (useExpMethod) {
-			findAndHookMethod("com.sina.weibo.feed.HomeListActivity$o", lpparam.classLoader, "getView",
-					int.class, android.view.View.class, android.view.ViewGroup.class, removeAD_New);
-		} else {
-			findAndHookMethod(LIST_BASE, lpparam.classLoader, "getStatuses", removeAD_Old);
-			findAndHookMethod(LIST_BASE, lpparam.classLoader, "getStatusesCopy", removeAD_Old);
-		}
+		findAndHookMethod(LIST_BASE, lpparam.classLoader, "getStatuses", removeAD);
+		findAndHookMethod(LIST_BASE, lpparam.classLoader, "getStatusesCopy", removeAD);
 	}
 
 	private void hookNightMode(final XC_LoadPackage.LoadPackageParam lpparam) {

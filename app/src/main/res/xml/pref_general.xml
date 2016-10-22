@@ -2,13 +2,6 @@
 
     <SwitchPreference
         android:defaultValue="false"
-        android:key="switch_remove_mode"
-        android:summaryOn="@string/pref_description_switch_remove_mode_on"
-        android:summaryOff="@string/pref_description_switch_remove_mode_off"
-        android:title="@string/pref_title_switch_remove_mode"/>
-
-    <SwitchPreference
-        android:defaultValue="false"
         android:key="force_browser"
         android:summary="@string/pref_description_force_browser"
         android:title="@string/pref_title_force_browser"/>
