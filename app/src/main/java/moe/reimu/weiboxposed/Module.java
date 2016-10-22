@@ -14,6 +14,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import de.robv.android.xposed.IXposedHookInitPackageResources;
@@ -73,25 +74,31 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 
 	public boolean isPromotion(Object mblog) {
 		try {
-			Object buttons = getObjectField(mblog, "buttons");
 			Object promotion = getObjectField(mblog, "promotion");
 
 			String scheme = (String)getObjectField(mblog, "scheme");
-
-			if (buttons != null) {
-				log(scheme + " detected as promotion: buttons");
-				return true;
-			}
+			Object title = getObjectField(mblog, "title");
+			boolean is_friend_hot = false;
 
 			if (promotion != null) {
-				String adType = (String)getObjectField(promotion, "adtype");
+				String ad_type = (String)getObjectField(promotion, "adtype");
 				log(scheme + " detected as promotion: adtype");
 				if(remove_hot) {
 					return true;
 				} else {
-					if (!"8".equals(adType)) {
+					if (!"8".equals(ad_type)) {
 						return true;
+					} else {
+						is_friend_hot = true;
 					}
+				}
+			}
+
+			if (title != null && !is_friend_hot) {
+				String text = (String)getObjectField(title, "text");
+				if (!"".equals(text)) {
+					log(scheme + " detected as promotion: non-empty title");
+					return true;
 				}
 			}
 
@@ -110,12 +117,10 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		@Override
 		protected void afterHookedMethod(MethodHookParam param) throws Throwable {
 			ArrayList<Object> origResult = (ArrayList<Object>)param.getResult();
-
-			for (Object mblog :
-					origResult) {
+			for (Iterator<Object> iterator = origResult.iterator(); iterator.hasNext(); ) {
+				Object mblog = iterator.next();
 				if (isPromotion(mblog)) {
-					log("Removing promotion.");
-					origResult.remove(mblog);
+					iterator.remove();
 				}
 			}
 		}
