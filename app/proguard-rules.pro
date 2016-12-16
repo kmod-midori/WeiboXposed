@@ -15,3 +15,8 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+-keep public class moe.reimu.weiboxposed.Module
+-keepclassmembernames class moe.reimu.weiboxposed.SettingsActivity {
+    boolean isModuleEnabled();
+}

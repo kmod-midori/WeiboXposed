@@ -31,7 +31,7 @@ import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
 
 public class Module implements IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedHookZygoteInit {
-	public XSharedPreferences prefs;
+	private XSharedPreferences prefs;
 
 	private static String MOD_PACKAGE_NAME = Module.class.getPackage().getName();
 	private static String WB_PACKAGE_NAME = "com.sina.weibo";
