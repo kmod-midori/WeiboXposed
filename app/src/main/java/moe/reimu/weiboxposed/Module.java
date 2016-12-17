@@ -2,18 +2,21 @@ package moe.reimu.weiboxposed;
 
 import android.app.Activity;
 import android.app.AndroidAppHelper;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.content.res.XResources;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.View;
-import android.widget.RelativeLayout;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
+import android.view.ViewGroup;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -27,7 +30,9 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_InitPackageResources.InitPackageResourcesParam;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
+import static de.robv.android.xposed.XposedBridge.hookAllMethods;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
+import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
 
 public class Module implements IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedHookZygoteInit {
@@ -36,6 +41,8 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 	private static String MOD_PACKAGE_NAME = Module.class.getPackage().getName();
 	private static String WB_PACKAGE_NAME = "com.sina.weibo";
 	private boolean remove_hot = false;
+	private List<String> enabled_feature = Arrays.asList("Night_Mode", "");
+	private List<String> disabled_feature;
 
 	@Override
 	public void handleInitPackageResources(InitPackageResourcesParam resparam) throws Throwable {
@@ -43,7 +50,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 			return;
 
 		// Disable Special BG touch event by setting width to 0
-		resparam.res.setReplacement("com.sina.weibo", "dimen", "feed_title_specialbg_width",
+		resparam.res.setReplacement(WB_PACKAGE_NAME, "dimen", "feed_title_specialbg_width",
 				new XResources.DimensionReplacement(0, TypedValue.COMPLEX_UNIT_PX));
 	}
 
@@ -72,18 +79,18 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 				XC_MethodReplacement.returnConstant(true));
 	}
 
-	public boolean isPromotion(Object mblog) {
+	private boolean isPromotion(Object mblog) {
 		try {
 			Object promotion = getObjectField(mblog, "promotion");
 
-			String scheme = (String)getObjectField(mblog, "scheme");
+			String scheme = (String) getObjectField(mblog, "scheme");
 			Object title = getObjectField(mblog, "title");
 			boolean is_friend_hot = false;
 
 			if (promotion != null) {
-				String ad_type = (String)getObjectField(promotion, "adtype");
-				log(scheme + " detected as promotion: adtype");
-				if(remove_hot) {
+				String ad_type = (String) getObjectField(promotion, "adtype");
+				logd(scheme + " detected as promotion: adtype");
+				if (remove_hot) {
 					return true;
 				} else {
 					if (!"8".equals(ad_type)) {
@@ -95,14 +102,14 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 			}
 
 			if (title != null && !is_friend_hot) {
-				String text = (String)getObjectField(title, "text");
+				String text = (String) getObjectField(title, "text");
 				if (!"".equals(text)) {
-					log(scheme + " detected as promotion: non-empty title");
+					logd(scheme + " detected as promotion: non-empty title");
 					return true;
 				}
 			}
 
-		} catch(NoSuchFieldError e) {
+		} catch (NoSuchFieldError e) {
 			log(e.getMessage());
 		}
 
@@ -113,10 +120,14 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		XposedBridge.log("[WeiboXposed] " + text);
 	}
 
-	XC_MethodHook removeAD = new XC_MethodHook() {
+	private void logd(String text) {
+		if (BuildConfig.DEBUG) XposedBridge.log("[WeiboXposed] " + text);
+	}
+
+	private XC_MethodHook removeAD = new XC_MethodHook() {
 		@Override
 		protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-			ArrayList<Object> origResult = (ArrayList<Object>)param.getResult();
+			ArrayList<Object> origResult = (ArrayList<Object>) param.getResult();
 			for (Iterator<Object> iterator = origResult.iterator(); iterator.hasNext(); ) {
 				Object mblog = iterator.next();
 				if (isPromotion(mblog)) {
@@ -126,7 +137,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		}
 	};
 
-	XC_MethodHook callbackCancel = XC_MethodReplacement.returnConstant(null);
+	private XC_MethodHook callbackCancel = XC_MethodReplacement.returnConstant(null);
 
 	private void hookAD(final XC_LoadPackage.LoadPackageParam lpparam) {
 		final String LIST_BASE = "com.sina.weibo.models.MBlogListBaseObject";
@@ -142,39 +153,30 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		findAndHookMethod(LIST_BASE, lpparam.classLoader, "getStatusesCopy", removeAD);
 	}
 
-	private void hookNightMode(final XC_LoadPackage.LoadPackageParam lpparam) {
-		findAndHookMethod("com.sina.weibo.models.ThemeList", lpparam.classLoader, "initFromJsonObject", JSONObject.class, new XC_MethodHook() {
+	private void hookGreyScale(final XC_LoadPackage.LoadPackageParam lpparam) {
+		Class<?> greyScaleClass = findClass("com.sina.weibo.utils.GreyScaleUtils", lpparam.classLoader);
+		hookAllMethods(greyScaleClass, "isFeatureEnabled", new XC_MethodHook() {
 			@Override
 			protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-				JSONObject json = (JSONObject) param.args[0];
-				JSONArray themeList = json.optJSONArray("list");
-				if (themeList == null) {
-					return;
+				String feature = (String) param.args[0];
+				if (enabled_feature.contains(feature)) {
+					param.setResult(true);
 				}
-				JSONObject nightTheme = new JSONObject("{\"skinname\":\"Night\",\"packagename\":\"com.sina.weibo.nightdream\",\"downloadlink\":\"\",\"iconurl\":\"\",\"previewimgurl\":\"\",\"platform\":\"Android\",\"version\":\"9.1.0\",\"filesize\":\"\",\"md5\":\"\",\"addtime\":\"\",\"isvip\":\"0\",\"showimg\":\"\"}");
-				themeList.put(nightTheme);
-				json.put("list", themeList);
-			}
-		});
-		findAndHookMethod("com.sina.weibo.MoreItemsActivity", lpparam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
-			@Override
-			protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-				Object act = param.thisObject;
-				// Night Mode Item -> o
-				RelativeLayout layout = (RelativeLayout)getObjectField(act, "o");
-				layout.setVisibility(View.VISIBLE);
+				if (disabled_feature.contains(feature)) {
+					param.setResult(false);
+				}
 			}
 		});
 	}
 
-	private void hookBrowser(final XC_LoadPackage.LoadPackageParam lpparam) {
+	private void hookBrowser() {
 		final String EXTRAS_KEY = "com_sina_weibo_weibobrowser_url";
 		findAndHookMethod(Activity.class, "startActivityForResult", Intent.class, int.class, Bundle.class, new XC_MethodHook() {
 			@Override
 			protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-				Intent intent = (Intent)param.args[0];
+				Intent intent = (Intent) param.args[0];
 				if (intent.getBooleanExtra(MOD_PACKAGE_NAME, false)) {
-					log("[Browser] Loop detected, skipping");
+					logd("[Browser] Loop detected, skipping");
 					return;
 				}
 
@@ -182,7 +184,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 				if (extras == null) return;
 
 				Uri url;
-				log("extras" + extras.toString());
+				logd("extras" + extras.toString());
 				String urlStr = extras.getString(EXTRAS_KEY);
 
 				if (urlStr == null || "".equals(urlStr)) {
@@ -203,24 +205,60 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 					url = Uri.parse(urlStr);
 				}
 
-				if (url.getHost().endsWith("weibo.com") || url.getHost().endsWith("weibo.cn")) return;
+				if (url.getHost().endsWith("weibo.com") || url.getHost().endsWith("weibo.cn"))
+					return;
 				param.setResult(null);
 				openUrl(url);
 			}
 		});
 	}
 
+	private void hookMoreItems(final XC_LoadPackage.LoadPackageParam lpparam) {
+		findAndHookMethod("com.sina.weibo.MoreItemsActivity", lpparam.classLoader, "onCreate", Bundle.class, new XC_MethodHook() {
+			@Override
+			protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+				final Activity thisAct = (Activity) param.thisObject;
+				Resources res = thisAct.getResources();
+				int scrId = res.getIdentifier("scrMore", "id", WB_PACKAGE_NAME);
+				ScrollView scrMore = (ScrollView) thisAct.findViewById(scrId);
+
+				TextView tv = new TextView(thisAct);
+				tv.setText("WeiboXposed v" + BuildConfig.VERSION_NAME);
+				tv.setTextColor(Color.BLACK);
+				tv.setPadding(20, 10, 0, 0);
+				((ViewGroup)scrMore.getChildAt(0)).addView(tv);
+				tv.setOnClickListener(new View.OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						Intent intent = new Intent(Intent.ACTION_MAIN);
+						intent.setComponent(new ComponentName(MOD_PACKAGE_NAME, SettingsActivity.class.getName()));
+						thisAct.startActivity(intent);
+					}
+				});
+			}
+		});
+	}
+
 	private void hookWeibo(final XC_LoadPackage.LoadPackageParam lpparam) {
 		prefs.reload();
+		log("Weibo loaded");
 
-		log("App Weibo Loaded");
+		disabled_feature = new ArrayList<>();
+		disabled_feature.add("gif_video_player");
+		disabled_feature.add("ad_pull_refresh_enable");
+		if (prefs.getBoolean("disable_new_message_flow", false)) {
+			disabled_feature.add("wb_message_new_flow_android_enable");
+		}
+
 		remove_hot = prefs.getBoolean("remove_hot", false);
 		hookAD(lpparam);
 
-		hookNightMode(lpparam);
+		hookGreyScale(lpparam);
 
 		boolean forceBrowser = prefs.getBoolean("force_browser", false);
-		if (forceBrowser) hookBrowser(lpparam);
+		if (forceBrowser) hookBrowser();
+
+		hookMoreItems(lpparam);
 
 	}
 
