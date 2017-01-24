@@ -3,12 +3,12 @@
     <string name="module_desc">微博修改 by 加大号的猫</string>
     <string name="title_activity_settings">设置</string>
 
-    <!-- Strings related to Settings -->
-
     <string name="pref_title_remove_hot">去除来自已关注用户的热门微博</string>
     <string name="pref_title_force_browser">强制使用外置浏览器</string>
     <string name="pref_description_force_browser">与“去你大爷的内置浏览器”可能发生冲突，请禁用该模块的“微博”规则。</string>
+    <string name="pref_title_disable_new_message_flow">禁用新版通知界面</string>
+    <string name="pref_features_title">功能</string>
+
     <string name="restart_weibo">配置已保存，强行停止微博或重启设备后生效</string>
     <string name="module_not_enabled">无法正常调用Xposed框架的功能，请确认Xposed已经加载且此模块已启用。如果问题仍然存在，请尝试禁用并重新启用此模块。</string>
-    <string name="pref_title_disable_new_message_flow">禁用新版通知界面</string>
 </resources>

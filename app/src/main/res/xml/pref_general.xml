@@ -1,19 +1,24 @@
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<android.support.v7.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <SwitchPreference
-        android:defaultValue="false"
-        android:key="remove_hot"
-        android:title="@string/pref_title_remove_hot"/>
+    <android.support.v7.preference.PreferenceCategory
+        android:key="features"
+        android:title="@string/pref_features_title">
 
-    <SwitchPreference
-        android:defaultValue="false"
-        android:key="force_browser"
-        android:summary="@string/pref_description_force_browser"
-        android:title="@string/pref_title_force_browser"/>
+        <android.support.v7.preference.SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="remove_hot"
+            android:title="@string/pref_title_remove_hot"/>
 
-    <SwitchPreference
-        android:defaultValue="false"
-        android:key="disable_new_message_flow"
-        android:title="@string/pref_title_disable_new_message_flow"/>
+        <android.support.v7.preference.SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="force_browser"
+            android:summary="@string/pref_description_force_browser"
+            android:title="@string/pref_title_force_browser"/>
 
-</PreferenceScreen>
+        <android.support.v7.preference.SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="disable_new_message_flow"
+            android:title="@string/pref_title_disable_new_message_flow"/>
+    </android.support.v7.preference.PreferenceCategory>
+
+</android.support.v7.preference.PreferenceScreen>
