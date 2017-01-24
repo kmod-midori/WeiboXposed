@@ -8,6 +8,11 @@
     <string name="pref_description_force_browser">与“去你大爷的内置浏览器”可能发生冲突，请禁用该模块的“微博”规则。</string>
     <string name="pref_title_disable_new_message_flow">禁用新版通知界面</string>
     <string name="pref_features_title">功能</string>
+    <string name="pref_filtering_title">屏蔽（每行一个）</string>
+    <string name="pref_title_content_keyword">内容关键字</string>
+    <string name="pref_title_user_keyword">用户名关键字</string>
+    <string name="pref_donate_title">捐赠</string>
+    <string name="pref_title_alipay">支付宝</string>
 
     <string name="restart_weibo">配置已保存，强行停止微博或重启设备后生效</string>
     <string name="module_not_enabled">无法正常调用Xposed框架的功能，请确认Xposed已经加载且此模块已启用。如果问题仍然存在，请尝试禁用并重新启用此模块。</string>

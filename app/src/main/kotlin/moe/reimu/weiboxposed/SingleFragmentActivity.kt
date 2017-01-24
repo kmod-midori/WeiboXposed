@@ -19,14 +19,11 @@ abstract class SingleFragmentActivity : AppCompatActivity() {
 
         val fragmentManager = supportFragmentManager
 
-        var fragment: Fragment? = fragmentManager.findFragmentById(R.id.fragment_container)
+        val fragment = fragmentManager.findFragmentById(R.id.fragment_container) ?: createFragment()
 
-        if (fragment == null) {
-            fragment = createFragment()
-            fragmentManager.beginTransaction()
-                    .add(R.id.fragment_container, fragment)
-                    .commit()
-        }
+        fragmentManager.beginTransaction()
+                .add(R.id.fragment_container, fragment)
+                .commit()
     }
 
 }

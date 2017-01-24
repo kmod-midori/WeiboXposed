@@ -40,7 +40,9 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     lateinit private var prefs: XSharedPreferences
     private var remove_hot = false
     private val enabled_feature = arrayListOf("Night_Mode")
-    private var disabled_feature = arrayListOf<String>()
+    private val disabled_feature = arrayListOf<String>()
+    private var content_keyword = listOf<String>()
+    private var user_keyword = listOf<String>()
 
 
     override fun handleInitPackageResources(resparam: InitPackageResourcesParam) {
@@ -54,7 +56,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
 
 
     override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
-        prefs = XSharedPreferences(MOD_PACKAGE_NAME,GeneralPreferenceFragment.PREF_NAME)
+        prefs = XSharedPreferences(MOD_PACKAGE_NAME, GeneralPreferenceFragment.PREF_NAME)
         prefs.makeWorldReadable()
 
         log("initialized")
@@ -64,28 +66,26 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
         when (lpparam.packageName) {
             WB_PACKAGE_NAME -> hookWeibo(lpparam)
-            MOD_PACKAGE_NAME -> hookSelf()
+            MOD_PACKAGE_NAME -> hookSelf(lpparam)
         }
     }
 
-    private fun hookSelf() {
+    private fun hookSelf(lpparam: XC_LoadPackage.LoadPackageParam) {
         // "Enable" the module
-        hookAllMethods(GeneralPreferenceFragment::class.java,
-                "isModuleEnabled",
-                XC_MethodReplacement.returnConstant(true))
+        findAndHookMethod("$MOD_PACKAGE_NAME.GeneralPreferenceFragment", lpparam.classLoader,
+                "isModuleEnabled", XC_MethodReplacement.returnConstant(true))
     }
 
     private fun isPromotion(mblog: Any): Boolean {
         try {
             val promotion = getObjectField(mblog, "promotion")
 
-            val scheme = getObjectField(mblog, "scheme") as String
             val title = getObjectField(mblog, "title")
             var is_friend_hot = false
 
             if (promotion != null) {
                 val ad_type = getObjectField(promotion, "adtype") as String
-                logd(scheme + " detected as promotion: adtype")
+                logd("detected promotion: adtype")
                 if (remove_hot) {
                     return true
                 } else {
@@ -101,13 +101,41 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
             if (title != null && !is_friend_hot) {
                 val text = getObjectField(title, "text") as String
                 if ("" != text) {
-                    logd(scheme + " detected as promotion: non-empty title")
+                    logd("detected promotion: non-empty title")
                     return true
                 }
             }
 
         } catch (e: NoSuchFieldError) {
             log(e.message!!)
+        }
+
+        return false
+    }
+
+    private fun checkText(text: String, keywords: List<String>): Boolean {
+        for (keyword in keywords) {
+            if (text.contains(keyword)){
+                logd("Keyword hit: $keyword inside $text")
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun shouldRemove(mblog: Any): Boolean {
+        if (isPromotion(mblog)) return true
+
+        val text = getObjectField(mblog, "text") as String
+        if (checkText(text, content_keyword)) return true
+
+        val user = getObjectField(mblog, "user")
+        val name = getObjectField(user, "screen_name") as String
+        if (checkText(name, user_keyword)) return true
+
+        val retweeted = getObjectField(mblog, "retweeted_status")
+        if (retweeted != null) {
+            if (shouldRemove(retweeted)) return true
         }
 
         return false
@@ -127,7 +155,9 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
             val iterator = origResult.iterator()
             while (iterator.hasNext()) {
                 val mblog = iterator.next()
-                if (isPromotion(mblog)) {
+                if (shouldRemove(mblog)) {
+                    val scheme = getObjectField(mblog, "scheme") as String
+                    logd("Removed $scheme")
                     iterator.remove()
                 }
             }
@@ -248,8 +278,24 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     }
 
     private fun hookWeibo(lpparam: XC_LoadPackage.LoadPackageParam) {
+        reloadPrefs()
+        hookAD(lpparam)
+        hookGreyScale(lpparam)
+
+        if (prefs.getBoolean("force_browser", false)){
+            hookBrowser()
+        }
+
+        hookMoreItems(lpparam)
+
+    }
+
+    private fun reloadPrefs() {
         prefs.reload()
-        log("Weibo loaded")
+        log("loaded")
+        if (BuildConfig.DEBUG) {
+            dumpPrefs()
+        }
 
         disabled_feature.clear()
         disabled_feature.add("gif_video_player")
@@ -259,17 +305,12 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
         }
 
         remove_hot = prefs.getBoolean("remove_hot", false)
-        hookAD(lpparam)
 
-        hookGreyScale(lpparam)
+        content_keyword = prefs.getString("content_keyword", "").split("\n")
+        content_keyword = content_keyword.filter(String::isNotBlank)
 
-        val forceBrowser = prefs.getBoolean("force_browser", false)
-        if (forceBrowser) hookBrowser()
-
-        hookMoreItems(lpparam)
-        if (BuildConfig.DEBUG) {
-            dumpPrefs()
-        }
+        user_keyword = prefs.getString("user_keyword", "").split("\n")
+        user_keyword = user_keyword.filter(String::isNotBlank)
     }
 
     private fun openUrl(url: Uri) {

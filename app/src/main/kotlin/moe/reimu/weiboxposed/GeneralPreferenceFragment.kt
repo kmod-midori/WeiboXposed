@@ -2,10 +2,13 @@ package moe.reimu.weiboxposed
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
 import android.support.v7.preference.PreferenceFragmentCompat
 import android.widget.Toast
+import java.net.URLEncoder
 
 class GeneralPreferenceFragment : PreferenceFragmentCompat(), SharedPreferences.OnSharedPreferenceChangeListener {
     companion object {
@@ -32,6 +35,21 @@ class GeneralPreferenceFragment : PreferenceFragmentCompat(), SharedPreferences.
         }
 
         addPreferencesFromResource(R.xml.pref_general)
+
+        val pref_alipay = findPreference("alipay")
+        pref_alipay.setOnPreferenceClickListener {
+            val qrcode = URLEncoder.encode("https://qr.alipay.com/a6x04349f12rwyb6webwlb7", "utf-8")
+            val alipayqr = "alipayqr://platformapi/startapp?saId=10000007&clientVersion=3.7.0.0718&qrcode=$qrcode"
+            val intent = Intent()
+            intent.action = Intent.ACTION_VIEW
+            intent.data = Uri.parse("$alipayqr&%3F_s%3Dweb-other&_t=${System.currentTimeMillis()}")
+            try {
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            false
+        }
     }
 
     private fun isModuleEnabled(): Boolean {

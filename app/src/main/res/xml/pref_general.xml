@@ -21,4 +21,23 @@
             android:title="@string/pref_title_disable_new_message_flow"/>
     </android.support.v7.preference.PreferenceCategory>
 
+    <android.support.v7.preference.PreferenceCategory
+        android:key="filtering"
+        android:title="@string/pref_filtering_title">
+        <android.support.v7.preference.EditTextPreference
+            android:defaultValue=""
+            android:key="content_keyword"
+            android:title="@string/pref_title_content_keyword"/>
+        <android.support.v7.preference.EditTextPreference
+            android:defaultValue=""
+            android:key="user_keyword"
+            android:title="@string/pref_title_user_keyword"/>
+    </android.support.v7.preference.PreferenceCategory>
+    <android.support.v7.preference.PreferenceCategory
+        android:title="@string/pref_donate_title">
+        <android.support.v7.preference.Preference
+            android:key="alipay"
+            android:title="@string/pref_title_alipay"/>
+    </android.support.v7.preference.PreferenceCategory>
+
 </android.support.v7.preference.PreferenceScreen>
