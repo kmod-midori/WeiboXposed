@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import de.robv.android.xposed.IXposedHookInitPackageResources;
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -127,6 +128,7 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 	private XC_MethodHook removeAD = new XC_MethodHook() {
 		@Override
 		protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+			@SuppressWarnings("unchecked")
 			ArrayList<Object> origResult = (ArrayList<Object>) param.getResult();
 			for (Iterator<Object> iterator = origResult.iterator(); iterator.hasNext(); ) {
 				Object mblog = iterator.next();
@@ -239,6 +241,14 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		});
 	}
 
+	private void dumpPrefs() {
+		Map<String,?> keys = prefs.getAll();
+
+		for(Map.Entry<String,?> entry : keys.entrySet()){
+			logd("Pref: " + entry.getKey() + "=" + entry.getValue().toString());
+		}
+	}
+
 	private void hookWeibo(final XC_LoadPackage.LoadPackageParam lpparam) {
 		prefs.reload();
 		log("Weibo loaded");
@@ -259,7 +269,9 @@ public class Module implements IXposedHookInitPackageResources, IXposedHookLoadP
 		if (forceBrowser) hookBrowser();
 
 		hookMoreItems(lpparam);
-
+		if (BuildConfig.DEBUG) {
+			dumpPrefs();
+		}
 	}
 
 	private void openUrl(Uri url) {
