@@ -126,12 +126,16 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     private fun shouldRemove(mblog: Any): Boolean {
         if (isPromotion(mblog)) return true
 
-        val text = getObjectField(mblog, "text") as String
-        if (checkText(text, content_keyword)) return true
+        val text = getObjectField(mblog, "text") as? String
+        if (text != null) {
+            if (checkText(text, content_keyword)) return true
+        }
 
         val user = getObjectField(mblog, "user")
-        val name = getObjectField(user, "screen_name") as String
-        if (checkText(name, user_keyword)) return true
+        if (user != null) {
+            val name = getObjectField(user, "screen_name") as String
+            if (checkText(name, user_keyword)) return true
+        }
 
         val retweeted = getObjectField(mblog, "retweeted_status")
         if (retweeted != null) {
