@@ -39,6 +39,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
 
     lateinit private var prefs: XSharedPreferences
     private var remove_hot = false
+    private var debug_mode = false
     private val enabled_feature = arrayListOf("Night_Mode")
     private val disabled_feature = arrayListOf<String>()
     private var content_keyword = listOf<String>()
@@ -150,7 +151,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     }
 
     private fun logd(text: String) {
-        if (BuildConfig.DEBUG) XposedBridge.log("[WeiboXposed] " + text)
+        if (debug_mode) XposedBridge.log("[WeiboXposed] " + text)
     }
 
     private val removeAD = object : XC_MethodHook() {
@@ -297,7 +298,8 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     private fun reloadPrefs() {
         prefs.reload()
         log("loaded")
-        if (BuildConfig.DEBUG) {
+        debug_mode = prefs.getBoolean("debug_mode", false)
+        if (debug_mode) {
             dumpPrefs()
         }
 

@@ -40,9 +40,8 @@ class GeneralPreferenceFragment : PreferenceFragmentCompat(), SharedPreferences.
         pref_alipay.setOnPreferenceClickListener {
             val qrcode = URLEncoder.encode("https://qr.alipay.com/a6x04349f12rwyb6webwlb7", "utf-8")
             val alipayqr = "alipayqr://platformapi/startapp?saId=10000007&clientVersion=3.7.0.0718&qrcode=$qrcode"
-            val intent = Intent()
-            intent.action = Intent.ACTION_VIEW
-            intent.data = Uri.parse("$alipayqr&%3F_s%3Dweb-other&_t=${System.currentTimeMillis()}")
+            val uri = Uri.parse("$alipayqr&%3F_s%3Dweb-other&_t=${System.currentTimeMillis()}")
+            val intent = Intent(Intent.ACTION_VIEW, uri)
             try {
                 context.startActivity(intent)
             } catch (e: Exception) {

@@ -19,6 +19,11 @@
             android:defaultValue="false"
             android:key="disable_new_message_flow"
             android:title="@string/pref_title_disable_new_message_flow"/>
+
+        <android.support.v7.preference.SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="debug_mode"
+            android:title="@string/pref_title_debug_mode"/>
     </android.support.v7.preference.PreferenceCategory>
 
     <android.support.v7.preference.PreferenceCategory
