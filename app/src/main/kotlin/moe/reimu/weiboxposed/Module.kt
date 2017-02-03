@@ -82,24 +82,19 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
             val promotion = getObjectField(mblog, "promotion")
 
             val title = getObjectField(mblog, "title")
-            var is_friend_hot = false
 
             if (promotion != null) {
-                val ad_type = getObjectField(promotion, "adtype") as String
+                val ad_type = getObjectField(promotion, "adtype") as String?
                 logd("detected promotion: adtype")
                 if (remove_hot) {
                     return true
                 } else {
                     // Check for Hot
-                    if ("8" != ad_type) {
-                        return true
-                    } else {
-                        is_friend_hot = true
-                    }
+                    return "8" != ad_type
                 }
             }
 
-            if (title != null && !is_friend_hot) {
+            if (title != null) {
                 val text = getObjectField(title, "text") as String
                 if ("" != text) {
                     logd("detected promotion: non-empty title")
