@@ -4,18 +4,5 @@
         <item name="colorPrimary">#F44336</item>
         <item name="colorPrimaryDark">#C62828</item>
         <item name="colorAccent">#4CAF50</item>
-        <item name="preferenceTheme">@style/PreferenceThemeOverlay</item>
-    </style>
-    <style name="PreferenceThemeOverlay">
-        <item name="preferenceScreenStyle">@style/Preference.PreferenceScreen</item>
-        <item name="preferenceFragmentStyle">@style/PreferenceFragment</item>
-        <item name="preferenceCategoryStyle">@style/Preference.Category</item>
-        <item name="preferenceStyle">@style/Preference</item>
-        <item name="preferenceInformationStyle">@style/Preference.Information</item>
-        <item name="checkBoxPreferenceStyle">@style/Preference.CheckBoxPreference</item>
-        <item name="switchPreferenceCompatStyle">@style/Preference.SwitchPreferenceCompat</item>
-        <item name="dialogPreferenceStyle">@style/Preference.DialogPreference</item>
-        <item name="editTextPreferenceStyle">@style/Preference.DialogPreference.EditTextPreference</item>
-        <item name="preferenceFragmentListStyle">@style/PreferenceFragmentList</item>
     </style>
 </resources>

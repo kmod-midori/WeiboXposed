@@ -4,6 +4,7 @@
     <string name="title_activity_settings">设置</string>
 
     <string name="pref_features_title">功能</string>
+    <string name="pref_title_global_enabled">启用模块</string>
     <string name="pref_title_remove_hot">去除已关注内容</string>
     <string name="pref_description_remove_hot">包含来自已经关注用户的“粉丝头条”等推广内容</string>
     <string name="pref_title_force_browser">强制使用外置浏览器</string>

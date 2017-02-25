@@ -1,49 +1,54 @@
-<android.support.v7.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <android.support.v7.preference.PreferenceCategory
+    <PreferenceCategory
         android:key="features"
         android:title="@string/pref_features_title">
 
-        <android.support.v7.preference.SwitchPreferenceCompat
+        <SwitchPreference
+            android:defaultValue="true"
+            android:key="global_enabled"
+            android:title="@string/pref_title_global_enabled"/>
+
+        <SwitchPreference
             android:defaultValue="false"
             android:key="remove_hot"
             android:title="@string/pref_title_remove_hot"
             android:summary="@string/pref_description_remove_hot"/>
 
-        <android.support.v7.preference.SwitchPreferenceCompat
+        <SwitchPreference
             android:defaultValue="false"
             android:key="force_browser"
             android:summary="@string/pref_description_force_browser"
             android:title="@string/pref_title_force_browser"/>
 
-        <android.support.v7.preference.SwitchPreferenceCompat
+        <SwitchPreference
             android:defaultValue="false"
             android:key="disable_new_message_flow"
             android:title="@string/pref_title_disable_new_message_flow"/>
 
-        <android.support.v7.preference.SwitchPreferenceCompat
+        <SwitchPreference
             android:defaultValue="false"
             android:key="debug_mode"
             android:title="@string/pref_title_debug_mode"/>
-    </android.support.v7.preference.PreferenceCategory>
+    </PreferenceCategory>
 
-    <android.support.v7.preference.PreferenceCategory
+    <PreferenceCategory
         android:key="filtering"
         android:title="@string/pref_filtering_title">
-        <android.support.v7.preference.EditTextPreference
+        <EditTextPreference
             android:defaultValue=""
             android:key="content_keyword"
             android:title="@string/pref_title_content_keyword"/>
-        <android.support.v7.preference.EditTextPreference
+        <EditTextPreference
             android:defaultValue=""
             android:key="user_keyword"
             android:title="@string/pref_title_user_keyword"/>
-    </android.support.v7.preference.PreferenceCategory>
-    <android.support.v7.preference.PreferenceCategory
+    </PreferenceCategory>
+    <PreferenceCategory
         android:title="@string/pref_donate_title">
-        <android.support.v7.preference.Preference
+        <Preference
             android:key="alipay"
             android:title="@string/pref_title_alipay"/>
-    </android.support.v7.preference.PreferenceCategory>
+    </PreferenceCategory>
 
-</android.support.v7.preference.PreferenceScreen>
+</PreferenceScreen>

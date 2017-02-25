@@ -20,3 +20,4 @@
 -keepclassmembernames class moe.reimu.weiboxposed.GeneralPreferenceFragment {
     boolean isModuleEnabled();
 }
+-keepnames class moe.reimu.weiboxposed.*

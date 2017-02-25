@@ -81,7 +81,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
         try {
             val promotion = getObjectField(mblog, "promotion")
 
-            val title = getObjectField(mblog, "title")
+//            val title = getObjectField(mblog, "title")
 
             if (promotion != null) {
                 val ad_type = getObjectField(promotion, "adtype") as String?
@@ -94,10 +94,10 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
                 }
             }
 
-            if (title != null) {
-                logd("detected promotion: title")
-                return true
-            }
+//            if (title != null) {
+//                logd("detected promotion: title")
+//                return true
+//            }
 
         } catch (e: NoSuchFieldError) {
             log(e.message!!)
@@ -275,7 +275,10 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     }
 
     private fun hookWeibo(lpparam: XC_LoadPackage.LoadPackageParam) {
-        reloadPrefs()
+        if (!reloadPrefs()){
+            log("Module disabled")
+            return
+        }
         hookAD(lpparam)
         hookGreyScale(lpparam)
 
@@ -287,12 +290,15 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
 
     }
 
-    private fun reloadPrefs() {
+    private fun reloadPrefs() : Boolean{
         prefs.reload()
-        log("loaded")
         debug_mode = prefs.getBoolean("debug_mode", false)
         if (debug_mode) {
             dumpPrefs()
+        }
+
+        if (!prefs.getBoolean("global_enabled", true)) {
+            return false
         }
 
         disabled_feature.clear()
@@ -309,6 +315,8 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
 
         user_keyword = prefs.getString("user_keyword", "").split("\n")
         user_keyword = user_keyword.filter(String::isNotBlank)
+        log("loaded")
+        return true
     }
 
     private fun openUrl(url: Uri) {
