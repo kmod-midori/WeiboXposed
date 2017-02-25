@@ -95,11 +95,8 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
             }
 
             if (title != null) {
-                val text = getObjectField(title, "text") as String
-                if ("" != text) {
-                    logd("detected promotion: non-empty title")
-                    return true
-                }
+                logd("detected promotion: title")
+                return true
             }
 
         } catch (e: NoSuchFieldError) {
