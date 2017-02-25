@@ -3,14 +3,17 @@
     <string name="module_desc">微博修改 by 加大号的猫</string>
     <string name="title_activity_settings">设置</string>
 
-    <string name="pref_title_remove_hot">去除来自已关注用户的热门微博</string>
+    <string name="pref_features_title">功能</string>
+    <string name="pref_title_remove_hot">去除已关注内容</string>
+    <string name="pref_description_remove_hot">包含来自已经关注用户的“粉丝头条”等推广内容</string>
     <string name="pref_title_force_browser">强制使用外置浏览器</string>
     <string name="pref_description_force_browser">与“去你大爷的内置浏览器”可能发生冲突，请禁用该模块的“微博”规则。</string>
     <string name="pref_title_disable_new_message_flow">禁用新版通知界面</string>
-    <string name="pref_features_title">功能</string>
+
     <string name="pref_filtering_title">屏蔽（每行一个）</string>
     <string name="pref_title_content_keyword">内容关键字</string>
     <string name="pref_title_user_keyword">用户名关键字</string>
+
     <string name="pref_donate_title">捐赠</string>
     <string name="pref_title_alipay">支付宝</string>
     <string name="pref_title_debug_mode">调试模式</string>

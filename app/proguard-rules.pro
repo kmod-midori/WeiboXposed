@@ -17,6 +17,6 @@
 #}
 
 -keep public class moe.reimu.weiboxposed.Module
--keepclassmembernames class moe.reimu.weiboxposed.SettingsActivity {
+-keepclassmembernames class moe.reimu.weiboxposed.GeneralPreferenceFragment {
     boolean isModuleEnabled();
 }
