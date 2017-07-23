@@ -19,14 +19,21 @@
 
         <activity
             android:name=".SettingsActivity"
-            android:label="@string/title_activity_settings"
-            android:exported="true">
+            android:exported="true"
+            android:label="@string/title_activity_settings">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.MAIN"/>
 
-                <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS" />
+                <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS"/>
             </intent-filter>
         </activity>
+
+        <provider
+            android:name=".SettingsProvider"
+            android:authorities="moe.reimu.weiboxposed.provider"
+            android:enabled="true"
+            android:exported="true">
+        </provider>
     </application>
 
 </manifest>

@@ -1,7 +1,5 @@
 package moe.reimu.weiboxposed
 
-import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -10,18 +8,10 @@ import android.widget.Toast
 import java.net.URLEncoder
 
 class GeneralPreferenceFragment : PreferenceFragment() {
-    companion object {
-        val PREF_NAME = "prefs"
-    }
-
-
-    @Suppress("DEPRECATION")
-    @SuppressLint("WorldReadableFiles")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val manager = preferenceManager
-        manager.sharedPreferencesMode = Context.MODE_WORLD_READABLE
         manager.sharedPreferencesName = PREF_NAME
 
 

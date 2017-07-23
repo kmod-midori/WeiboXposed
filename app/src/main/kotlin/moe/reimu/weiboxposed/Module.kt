@@ -37,7 +37,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
         private val WB_PACKAGE_NAME = "com.sina.weibo"
     }
 
-    lateinit private var prefs: XSharedPreferences
+    lateinit private var prefs: RemoteSharedPreference
     private var remove_hot = false
     private var debug_mode = false
     private val enabled_feature = arrayListOf("Night_Mode")
@@ -57,9 +57,6 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
 
 
     override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
-        prefs = XSharedPreferences(MOD_PACKAGE_NAME, GeneralPreferenceFragment.PREF_NAME)
-        prefs.makeWorldReadable()
-
         log("initialized")
     }
 
@@ -266,14 +263,6 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
                 })
     }
 
-    private fun dumpPrefs() {
-        val keys = prefs.all
-
-        for ((key, value) in keys) {
-            logd("Pref: $key = ${value.toString()}")
-        }
-    }
-
     private fun hookWeibo(lpparam: XC_LoadPackage.LoadPackageParam) {
         if (!reloadPrefs()){
             log("Module disabled")
@@ -291,11 +280,8 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     }
 
     private fun reloadPrefs() : Boolean{
-        prefs.reload()
+        prefs = RemoteSharedPreference(AndroidAppHelper.currentApplication())
         debug_mode = prefs.getBoolean("debug_mode", false)
-        if (debug_mode) {
-            dumpPrefs()
-        }
 
         if (!prefs.getBoolean("global_enabled", true)) {
             return false

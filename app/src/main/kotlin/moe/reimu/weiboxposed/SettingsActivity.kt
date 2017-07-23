@@ -1,17 +1,14 @@
 package moe.reimu.weiboxposed
 
-import android.annotation.SuppressLint
 import android.content.SharedPreferences
 import android.preference.PreferenceActivity
 import android.os.Bundle
 import android.widget.Toast
 
 class SettingsActivity : PreferenceActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
-    @Suppress("DEPRECATION")
-    @SuppressLint("WorldReadableFiles")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        getSharedPreferences(GeneralPreferenceFragment.PREF_NAME, MODE_WORLD_READABLE)
+        getSharedPreferences(PREF_NAME, MODE_PRIVATE)
                 .registerOnSharedPreferenceChangeListener(this)
         fragmentManager.beginTransaction().replace(android.R.id.content, GeneralPreferenceFragment()).commit()
     }
