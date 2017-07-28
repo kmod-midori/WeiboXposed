@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AndroidAppHelper
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.res.XResources
 import android.graphics.Color
@@ -13,16 +14,11 @@ import android.util.TypedValue
 import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.TextView
+import com.crossbowffs.remotepreferences.RemotePreferences
+import de.robv.android.xposed.*
 
 import java.util.ArrayList
 
-import de.robv.android.xposed.IXposedHookInitPackageResources
-import de.robv.android.xposed.IXposedHookLoadPackage
-import de.robv.android.xposed.IXposedHookZygoteInit
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XC_MethodReplacement
-import de.robv.android.xposed.XSharedPreferences
-import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.callbacks.XC_InitPackageResources.InitPackageResourcesParam
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
@@ -31,13 +27,12 @@ import de.robv.android.xposed.XposedHelpers.findAndHookMethod
 import de.robv.android.xposed.XposedHelpers.findClass
 import de.robv.android.xposed.XposedHelpers.getObjectField
 
-class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedHookZygoteInit {
+class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
     companion object {
         private val MOD_PACKAGE_NAME = Module::class.java.`package`.name
-        private val WB_PACKAGE_NAME = "com.sina.weibo"
     }
 
-    lateinit private var prefs: RemoteSharedPreference
+    lateinit private var prefs: RemotePreferences
     private var remove_hot = false
     private var debug_mode = false
     private val enabled_feature = arrayListOf("Night_Mode")
@@ -47,17 +42,12 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
 
 
     override fun handleInitPackageResources(resparam: InitPackageResourcesParam) {
-        if (resparam.packageName != Module.WB_PACKAGE_NAME)
+        if (resparam.packageName != WB_PACKAGE_NAME)
             return
 
         // Disable Special BG touch event by setting width to 0
         resparam.res.setReplacement(WB_PACKAGE_NAME, "dimen", "feed_title_specialbg_width",
                 XResources.DimensionReplacement(0f, TypedValue.COMPLEX_UNIT_PX))
-    }
-
-
-    override fun initZygote(startupParam: IXposedHookZygoteInit.StartupParam) {
-        log("initialized")
     }
 
 
@@ -161,7 +151,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     private val callbackCancel = XC_MethodReplacement.returnConstant(null)
 
     private fun hookAD(lpparam: XC_LoadPackage.LoadPackageParam) {
-        val LIST_BASE = "com.sina.weibo.models.MBlogListBaseObject"
+        val LIST_BASE = "$WB_PACKAGE_NAME.models.MBlogListBaseObject"
         findAndHookMethod(LIST_BASE, lpparam.classLoader, "setTrends", List::class.java, callbackCancel)
         findAndHookMethod(LIST_BASE, lpparam.classLoader, "getTrends", object : XC_MethodHook() {
             override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
@@ -175,7 +165,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     }
 
     private fun hookGreyScale(lpparam: XC_LoadPackage.LoadPackageParam) {
-        val greyScaleClass = findClass("com.sina.weibo.utils.GreyScaleUtils", lpparam.classLoader)
+        val greyScaleClass = findClass("$WB_PACKAGE_NAME.utils.GreyScaleUtils", lpparam.classLoader)
         hookAllMethods(greyScaleClass, "isFeatureEnabled", object : XC_MethodHook() {
             override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
                 val feature = param.args[0] as String
@@ -238,7 +228,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
     }
 
     private fun hookMoreItems(lpparam: XC_LoadPackage.LoadPackageParam) {
-        findAndHookMethod("com.sina.weibo.MoreItemsActivity", lpparam.classLoader,
+        findAndHookMethod("$WB_PACKAGE_NAME.MoreItemsActivity", lpparam.classLoader,
                 "onCreate",
                 Bundle::class.java,
                 object : XC_MethodHook() {
@@ -247,7 +237,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
                         val thisAct = param.thisObject as Activity
                         val res = thisAct.resources
                         val scrId = res.getIdentifier("scrMore", "id", WB_PACKAGE_NAME)
-                        val scrMore = thisAct.findViewById(scrId) as ScrollView
+                        val scrMore : ScrollView = thisAct.findViewById(scrId)
 
                         val tv = TextView(thisAct)
                         tv.text = "WeiboXposed v" + BuildConfig.VERSION_NAME
@@ -279,8 +269,11 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage, IXposedH
 
     }
 
-    private fun reloadPrefs() : Boolean{
-        prefs = RemoteSharedPreference(AndroidAppHelper.currentApplication())
+    private fun reloadPrefs() : Boolean {
+        val activityThread = XposedHelpers.callStaticMethod(
+                XposedHelpers.findClass("android.app.ActivityThread", null), "currentActivityThread")
+        val systemCtx = XposedHelpers.callMethod(activityThread, "getSystemContext") as Context
+        prefs = RemotePreferences(systemCtx, PROVIDER_AUTHORITY, PREF_NAME)
         debug_mode = prefs.getBoolean("debug_mode", false)
 
         if (!prefs.getBoolean("global_enabled", true)) {
