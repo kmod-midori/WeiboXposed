@@ -32,7 +32,8 @@
             android:name=".SettingsProvider"
             android:authorities="moe.reimu.weiboxposed.provider"
             android:enabled="true"
-            android:exported="true">
+            android:exported="true"
+            android:readPermission="com.sina.weibo.data.sp.dbsharedpreference">
         </provider>
     </application>
 

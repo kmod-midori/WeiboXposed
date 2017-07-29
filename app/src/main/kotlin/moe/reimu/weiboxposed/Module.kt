@@ -225,6 +225,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                         openUrl(url)
                     }
                 })
+        log("Hooked external browser.")
     }
 
     private fun hookMoreItems(lpparam: XC_LoadPackage.LoadPackageParam) {
