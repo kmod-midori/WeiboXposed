@@ -10,6 +10,8 @@
     <string name="pref_title_force_browser">强制使用外置浏览器</string>
     <string name="pref_description_force_browser">与“去你大爷的内置浏览器”可能发生冲突，请禁用该模块的“微博”规则。</string>
     <string name="pref_title_disable_new_message_flow">禁用新版通知界面</string>
+    <string name="pref_title_no_story">禁用首页上的“微博故事”推荐</string>
+    <string name="pref_title_comment_filters">评论界面过滤</string>
 
     <string name="pref_filtering_title">屏蔽（每行一个）</string>
     <string name="pref_title_content_keyword">内容关键字</string>

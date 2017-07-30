@@ -23,9 +23,7 @@ import de.robv.android.xposed.callbacks.XC_InitPackageResources.InitPackageResou
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 import de.robv.android.xposed.XposedBridge.hookAllMethods
-import de.robv.android.xposed.XposedHelpers.findAndHookMethod
-import de.robv.android.xposed.XposedHelpers.findClass
-import de.robv.android.xposed.XposedHelpers.getObjectField
+import de.robv.android.xposed.XposedHelpers.*
 
 class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
     companion object {
@@ -39,6 +37,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
     private val disabled_feature = arrayListOf<String>()
     private var content_keyword = listOf<String>()
     private var user_keyword = listOf<String>()
+    private var comment_filters = listOf<Int>()
 
 
     override fun handleInitPackageResources(resparam: InitPackageResourcesParam) {
@@ -254,6 +253,40 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                 })
     }
 
+    fun hookStory(lpparam: XC_LoadPackage.LoadPackageParam) {
+        findAndHookMethod("$WB_PACKAGE_NAME.story.common.bean.wrapper.StoryListWrapper",
+                lpparam.classLoader,
+                "toList",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
+                        param.result  = arrayListOf<Any>()
+                    }
+                })
+    }
+
+    fun hookComment(lpparam: XC_LoadPackage.LoadPackageParam) {
+        findAndHookMethod("$WB_PACKAGE_NAME.models.JsonCommentMessageList",
+                lpparam.classLoader,
+                "getCommentMessageList",
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: XC_MethodHook.MethodHookParam) {
+                        val origResult = param.result as ArrayList<*>
+                        val iterator = origResult.iterator()
+                        while (iterator.hasNext()) {
+                            val comment = iterator.next()
+                            try {
+                                val comment_type = getObjectField(comment, "comment_type_new") as Int
+                                if (comment_filters.contains(comment_type)) {
+                                    logd("Comment type = $comment_type, removed.")
+                                    iterator.remove()
+                                }
+                            } catch (e: NoSuchFieldError) {}
+                        }
+
+                    }
+                })
+    }
+
     private fun hookWeibo(lpparam: XC_LoadPackage.LoadPackageParam) {
         if (!reloadPrefs()){
             log("Module disabled")
@@ -268,6 +301,11 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
 
         hookMoreItems(lpparam)
 
+        if (prefs.getBoolean("no_story", false)){
+            hookStory(lpparam)
+        }
+
+        hookComment(lpparam)
     }
 
     private fun reloadPrefs() : Boolean {
@@ -295,6 +333,15 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
 
         user_keyword = prefs.getString("user_keyword", "").split("\n")
         user_keyword = user_keyword.filter(String::isNotBlank)
+
+        // 3 -> WBCommmonCommentTypeForwardedByMe
+        // 4 -> WBCommmonCommentTypeCommmentedByBlogger
+        // 5 -> WBCommmonCommentTypeReplyByBlogger
+        // 6 -> WBCommmonCommentTypeLikedByBlogger
+        comment_filters = prefs.getStringSet("comment_filters", setOf("3", "4", "5", "6")).map {
+            it.toInt()
+        }
+
         log("loaded")
         return true
     }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="comment_filters">
+        <item>我转发过的微博</item>
+        <item>博主发表的评论</item>
+        <item>博主回复的评论</item>
+        <item>博主赞过的评论</item>
+    </string-array>
+    <string-array name="comment_filters_values">
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+    </string-array>
+</resources>

@@ -28,6 +28,18 @@
 
         <SwitchPreference
             android:defaultValue="false"
+            android:key="no_story"
+            android:title="@string/pref_title_no_story"/>
+
+        <MultiSelectListPreference
+            android:key="comment_filters"
+            android:title="@string/pref_title_comment_filters"
+            android:entries="@array/comment_filters"
+            android:entryValues="@array/comment_filters_values"
+            android:defaultValue="@array/comment_filters_values" />
+
+        <SwitchPreference
+            android:defaultValue="false"
             android:key="debug_mode"
             android:title="@string/pref_title_debug_mode"/>
     </PreferenceCategory>
