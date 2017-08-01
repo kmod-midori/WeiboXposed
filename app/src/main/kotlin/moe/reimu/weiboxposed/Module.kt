@@ -14,7 +14,6 @@ import android.util.TypedValue
 import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.TextView
-import com.crossbowffs.remotepreferences.RemotePreferences
 import de.robv.android.xposed.*
 
 import java.util.ArrayList
@@ -22,7 +21,6 @@ import java.util.ArrayList
 import de.robv.android.xposed.callbacks.XC_InitPackageResources.InitPackageResourcesParam
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
-import de.robv.android.xposed.XposedBridge.hookAllMethods
 import de.robv.android.xposed.XposedHelpers.*
 
 class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
@@ -30,7 +28,6 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
         private val MOD_PACKAGE_NAME = Module::class.java.`package`.name
     }
 
-    lateinit private var prefs: RemotePreferences
     private var remove_hot = false
     private var debug_mode = false
     private val enabled_feature = arrayListOf("Night_Mode")
@@ -67,8 +64,6 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
         try {
             val promotion = getObjectField(mblog, "promotion")
 
-//            val title = getObjectField(mblog, "title")
-
             if (promotion != null) {
                 val ad_type = getObjectField(promotion, "adtype") as String?
                 logd("detected promotion: adtype")
@@ -80,11 +75,6 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                 }
             }
 
-//            if (title != null) {
-//                logd("detected promotion: title")
-//                return true
-//            }
-
         } catch (e: NoSuchFieldError) {
             log(e.message!!)
         }
@@ -94,7 +84,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
 
     private fun checkText(text: String, keywords: List<String>): Boolean {
         for (keyword in keywords) {
-            if (text.contains(keyword)){
+            if (text.contains(keyword)) {
                 logd("Keyword hit: $keyword inside $text")
                 return true
             }
@@ -147,45 +137,47 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
         }
     }
 
-    private val callbackCancel = XC_MethodReplacement.returnConstant(null)
+    private val callbackCancel = XC_MethodReplacement.DO_NOTHING
+    private val callbackEmptyList = object : XC_MethodHook() {
+        override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
+            param.result = arrayListOf<Any>()
+        }
+    }
 
     private fun hookAD(lpparam: XC_LoadPackage.LoadPackageParam) {
         val LIST_BASE = "$WB_PACKAGE_NAME.models.MBlogListBaseObject"
         findAndHookMethod(LIST_BASE, lpparam.classLoader, "setTrends", List::class.java, callbackCancel)
-        findAndHookMethod(LIST_BASE, lpparam.classLoader, "getTrends", object : XC_MethodHook() {
-            override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
-                param.result = arrayListOf<Any>()
-            }
-        })
-
+        findAndHookMethod(LIST_BASE, lpparam.classLoader, "getTrends", callbackEmptyList)
         findAndHookMethod(LIST_BASE, lpparam.classLoader, "insetTrend", callbackCancel)
+
         findAndHookMethod(LIST_BASE, lpparam.classLoader, "getStatuses", removeAD)
         findAndHookMethod(LIST_BASE, lpparam.classLoader, "getStatusesCopy", removeAD)
     }
 
     private fun hookGreyScale(lpparam: XC_LoadPackage.LoadPackageParam) {
-        val greyScaleClass = findClass("$WB_PACKAGE_NAME.utils.GreyScaleUtils", lpparam.classLoader)
-        hookAllMethods(greyScaleClass, "isFeatureEnabled", object : XC_MethodHook() {
-            override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
-                val feature = param.args[0] as String
+        lpparam.find("$WB_PACKAGE_NAME.utils.GreyScaleUtils")
+                .method("isFeatureEnabled", String::class.java)
+                .hook {
+                    before {
+                        val feature = it.args[0] as String
 
-                if (enabled_feature.contains(feature)) {
-                    param.result = true
+                        if (enabled_feature.contains(feature)) {
+                            it.result = true
+                        }
+                        if (disabled_feature.contains(feature)) {
+                            it.result = false
+                        }
+                    }
                 }
-                if (disabled_feature.contains(feature)) {
-                    param.result = false
-                }
-            }
-        })
     }
 
     private fun hookBrowser() {
         val EXTRAS_KEY = "com_sina_weibo_weibobrowser_url"
-        findAndHookMethod(Activity::class.java, "startActivityForResult",
-                Intent::class.java,
-                Int::class.javaPrimitiveType,
-                Bundle::class.java,
-                object : XC_MethodHook() {
+        Activity::class.java
+                .method("startActivityForResult", Intent::class.java,
+                        Int::class.javaPrimitiveType!!,
+                        Bundle::class.java)
+                .hook(object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
                         val intent = param.args[0] as Intent
                         if (intent.getBooleanExtra(MOD_PACKAGE_NAME, false)) {
@@ -224,20 +216,19 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                         openUrl(url)
                     }
                 })
-        log("Hooked external browser.")
+        logd("Hooked external browser.")
     }
 
+    @SuppressLint("SetTextI18n")
     private fun hookMoreItems(lpparam: XC_LoadPackage.LoadPackageParam) {
-        findAndHookMethod("$WB_PACKAGE_NAME.MoreItemsActivity", lpparam.classLoader,
-                "onCreate",
-                Bundle::class.java,
-                object : XC_MethodHook() {
-                    @SuppressLint("SetTextI18n")
-                    override fun afterHookedMethod(param: XC_MethodHook.MethodHookParam) {
-                        val thisAct = param.thisObject as Activity
+        lpparam.find("$WB_PACKAGE_NAME.MoreItemsActivity")
+                .method("onCreate", Bundle::class.java)
+                .hook {
+                    after {
+                        val thisAct = it.thisObject as Activity
                         val res = thisAct.resources
                         val scrId = res.getIdentifier("scrMore", "id", WB_PACKAGE_NAME)
-                        val scrMore : ScrollView = thisAct.findViewById(scrId)
+                        val scrMore: ScrollView = thisAct.findViewById(scrId)
 
                         val tv = TextView(thisAct)
                         tv.text = "WeiboXposed v" + BuildConfig.VERSION_NAME
@@ -250,27 +241,21 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                             thisAct.startActivity(intent)
                         }
                     }
-                })
+                }
     }
 
     fun hookStory(lpparam: XC_LoadPackage.LoadPackageParam) {
-        findAndHookMethod("$WB_PACKAGE_NAME.story.common.bean.wrapper.StoryListWrapper",
-                lpparam.classLoader,
-                "toList",
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
-                        param.result  = arrayListOf<Any>()
-                    }
-                })
+        lpparam.find("$WB_PACKAGE_NAME.story.common.bean.wrapper.StoryListWrapper")
+                .method("toList")
+                .hook(callbackEmptyList)
     }
 
     fun hookComment(lpparam: XC_LoadPackage.LoadPackageParam) {
-        findAndHookMethod("$WB_PACKAGE_NAME.models.JsonCommentMessageList",
-                lpparam.classLoader,
-                "getCommentMessageList",
-                object : XC_MethodHook() {
-                    override fun afterHookedMethod(param: XC_MethodHook.MethodHookParam) {
-                        val origResult = param.result as ArrayList<*>
+        lpparam.find("$WB_PACKAGE_NAME.models.JsonCommentMessageList")
+                .method("getCommentMessageList")
+                .hook {
+                    after {
+                        val origResult = it.result as ArrayList<*>
                         val iterator = origResult.iterator()
                         while (iterator.hasNext()) {
                             val comment = iterator.next()
@@ -280,67 +265,71 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                                     logd("Comment type = $comment_type, removed.")
                                     iterator.remove()
                                 }
-                            } catch (e: NoSuchFieldError) {}
+                            } catch (e: NoSuchFieldError) {
+                            }
                         }
-
                     }
-                })
+                }
     }
 
     private fun hookWeibo(lpparam: XC_LoadPackage.LoadPackageParam) {
-        if (!reloadPrefs()){
+        if (!reloadPrefs()) {
             log("Module disabled")
             return
         }
         hookAD(lpparam)
         hookGreyScale(lpparam)
 
-        if (prefs.getBoolean("force_browser", false)){
-            hookBrowser()
-        }
-
+        if (Settings.force_browser) hookBrowser()
         hookMoreItems(lpparam)
 
-        if (prefs.getBoolean("no_story", false)){
-            hookStory(lpparam)
-        }
+        if (Settings.no_story) hookStory(lpparam)
 
         hookComment(lpparam)
     }
 
-    private fun reloadPrefs() : Boolean {
+    object Settings : Preferences() {
+        val global_enabled by booleanPref(null, true)
+        val force_browser by booleanPref()
+        val no_story by booleanPref()
+        val debug_mode by booleanPref()
+        val disable_new_message_flow by booleanPref()
+        val remove_hot by booleanPref()
+        val content_keyword by stringPref(null, "")
+        val user_keyword by stringPref(null, "")
+        // 2 -> WBCommmonCommentTypeLikedByMe
+        // 3 -> WBCommmonCommentTypeForwardedByMe
+        // 4 -> WBCommmonCommentTypeCommmentedByBlogger
+        // 5 -> WBCommmonCommentTypeReplyByBlogger
+        // 6 -> WBCommmonCommentTypeLikedByBlogger
+        val comment_filters by stringSetPref(null, setOf("2", "3", "4", "5", "6"))
+    }
+
+    private fun reloadPrefs(): Boolean {
+
         val activityThread = XposedHelpers.callStaticMethod(
                 XposedHelpers.findClass("android.app.ActivityThread", null), "currentActivityThread")
         val systemCtx = XposedHelpers.callMethod(activityThread, "getSystemContext") as Context
-        prefs = RemotePreferences(systemCtx, PROVIDER_AUTHORITY, PREF_NAME)
-        debug_mode = prefs.getBoolean("debug_mode", false)
+        Preferences.init(systemCtx)
 
-        if (!prefs.getBoolean("global_enabled", true)) {
+        debug_mode = Settings.debug_mode
+
+        if (!Settings.global_enabled) {
             return false
         }
 
         disabled_feature.clear()
         disabled_feature.add("gif_video_player")
         disabled_feature.add("ad_pull_refresh_enable")
-        if (prefs.getBoolean("disable_new_message_flow", false)) {
+        if (Settings.disable_new_message_flow) {
             disabled_feature.add("wb_message_new_flow_android_enable")
         }
 
-        remove_hot = prefs.getBoolean("remove_hot", false)
+        remove_hot = Settings.remove_hot
+        content_keyword = Settings.content_keyword!!.split("\n").filter(String::isNotBlank)
+        user_keyword = Settings.user_keyword!!.split("\n").filter(String::isNotBlank)
 
-        content_keyword = prefs.getString("content_keyword", "").split("\n")
-        content_keyword = content_keyword.filter(String::isNotBlank)
-
-        user_keyword = prefs.getString("user_keyword", "").split("\n")
-        user_keyword = user_keyword.filter(String::isNotBlank)
-
-        // 3 -> WBCommmonCommentTypeForwardedByMe
-        // 4 -> WBCommmonCommentTypeCommmentedByBlogger
-        // 5 -> WBCommmonCommentTypeReplyByBlogger
-        // 6 -> WBCommmonCommentTypeLikedByBlogger
-        comment_filters = prefs.getStringSet("comment_filters", setOf("3", "4", "5", "6")).map {
-            it.toInt()
-        }
+        comment_filters = Settings.comment_filters.map(String::toInt)
 
         log("loaded")
         return true
