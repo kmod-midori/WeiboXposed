@@ -9,8 +9,8 @@ android {
         applicationId "moe.reimu.weiboxposed"
         minSdkVersion 17
         targetSdkVersion 26
-        versionCode 16
-        versionName "1.7"
+        versionCode 17
+        versionName "1.8"
     }
     buildTypes {
         release {
