@@ -33,6 +33,8 @@ abstract class Preferences {
         fun init(context: Context) {
             this.context = context
         }
+
+        fun checkInit() = this.context != null
     }
 
     private val prefs: RemotePreferences by lazy {

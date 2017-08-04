@@ -4,13 +4,13 @@
     <string name="title_activity_settings">设置</string>
 
     <string name="pref_features_title">功能</string>
-    <string name="pref_title_global_enabled">启用模块</string>
+    <string name="pref_title_global_enabled">启用模块 *</string>
     <string name="pref_title_remove_hot">去除已关注内容</string>
     <string name="pref_description_remove_hot">包含来自已经关注用户的“粉丝头条”等推广内容</string>
     <string name="pref_title_force_browser">强制使用外置浏览器</string>
     <string name="pref_description_force_browser">与“去你大爷的内置浏览器”可能发生冲突，请禁用该模块的“微博”规则。</string>
-    <string name="pref_title_disable_new_message_flow">禁用新版通知界面</string>
-    <string name="pref_title_no_story">禁用首页上的“微博故事”推荐</string>
+    <string name="pref_title_disable_new_message_flow">禁用新版通知界面 *</string>
+    <string name="pref_title_no_story">禁用首页上的“微博故事”推荐 *</string>
     <string name="pref_title_comment_filters">评论界面过滤</string>
 
     <string name="pref_filtering_title">屏蔽（每行一个）</string>
@@ -21,6 +21,6 @@
     <string name="pref_title_alipay">支付宝</string>
     <string name="pref_title_debug_mode">调试模式</string>
 
-    <string name="restart_weibo">配置已保存，强行停止微博或重启设备后生效</string>
+    <string name="restart_weibo">配置已保存，除标注(*)外刷新即可生效</string>
     <string name="module_not_enabled">无法正常调用Xposed框架的功能，请确认Xposed已经加载且此模块已启用。如果问题仍然存在，请尝试禁用并重新启用此模块。</string>
 </resources>

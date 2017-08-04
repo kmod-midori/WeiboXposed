@@ -1,5 +1,6 @@
 package moe.reimu.weiboxposed
 
+import android.content.Intent
 import android.content.SharedPreferences
 import android.preference.PreferenceActivity
 import android.os.Bundle
@@ -19,5 +20,6 @@ class SettingsActivity : PreferenceActivity(), SharedPreferences.OnSharedPrefere
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         Toast.makeText(this, R.string.restart_weibo, Toast.LENGTH_SHORT).show()
+        sendBroadcast(Intent(BROADCAST))
     }
 }

@@ -3,14 +3,14 @@ package moe.reimu.weiboxposed
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AndroidAppHelper
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
+import android.app.Application
+import android.content.*
 import android.content.res.XResources
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.util.TypedValue
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.TextView
@@ -22,6 +22,7 @@ import de.robv.android.xposed.callbacks.XC_InitPackageResources.InitPackageResou
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 
 import de.robv.android.xposed.XposedHelpers.*
+import de.robv.android.xposed.callbacks.XC_LayoutInflated
 
 class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
     companion object {
@@ -30,20 +31,29 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
 
     private var remove_hot = false
     private var debug_mode = false
+    private var force_browser = false
+    private var no_story = false
     private val enabled_feature = arrayListOf("Night_Mode")
     private val disabled_feature = arrayListOf<String>()
     private var content_keyword = listOf<String>()
     private var user_keyword = listOf<String>()
     private var comment_filters = listOf<Int>()
+    private var receiver: BroadcastReceiver? = null
 
 
     override fun handleInitPackageResources(resparam: InitPackageResourcesParam) {
         if (resparam.packageName != WB_PACKAGE_NAME)
             return
+        initPref()
 
         // Disable Special BG touch event by setting width to 0
         resparam.res.setReplacement(WB_PACKAGE_NAME, "dimen", "feed_title_specialbg_width",
                 XResources.DimensionReplacement(0f, TypedValue.COMPLEX_UNIT_PX))
+        resparam.res.hookLayout(WB_PACKAGE_NAME, "layout", "story_feed_horiz_photo_list", object : XC_LayoutInflated() {
+            override fun handleLayoutInflated(liparam: LayoutInflatedParam) {
+                if (no_story) liparam.view.visibility = View.GONE
+            }
+        })
     }
 
 
@@ -122,9 +132,9 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
         if (debug_mode) XposedBridge.log("[WeiboXposed] " + text)
     }
 
-    private val removeAD = object : XC_MethodHook() {
-        override fun afterHookedMethod(param: XC_MethodHook.MethodHookParam) {
-            val origResult = param.result as ArrayList<*>
+    private val removeAD = HookBuilder {
+        after {
+            val origResult = it.result as ArrayList<*>
             val iterator = origResult.iterator()
             while (iterator.hasNext()) {
                 val mblog = iterator.next()
@@ -135,14 +145,14 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                 }
             }
         }
-    }
+    }.build()
 
     private val callbackCancel = XC_MethodReplacement.DO_NOTHING
-    private val callbackEmptyList = object : XC_MethodHook() {
-        override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
-            param.result = arrayListOf<Any>()
+    private val callbackEmptyList = HookBuilder {
+        before {
+            it.result = arrayListOf<Any>()
         }
-    }
+    }.build()
 
     private fun hookAD(lpparam: XC_LoadPackage.LoadPackageParam) {
         val LIST_BASE = "$WB_PACKAGE_NAME.models.MBlogListBaseObject"
@@ -179,6 +189,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                         Bundle::class.java)
                 .hook(object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
+                        if (!force_browser) return
                         val intent = param.args[0] as Intent
                         if (intent.getBooleanExtra(MOD_PACKAGE_NAME, false)) {
                             logd("[Browser] Loop detected, skipping")
@@ -244,12 +255,6 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                 }
     }
 
-    fun hookStory(lpparam: XC_LoadPackage.LoadPackageParam) {
-        lpparam.find("$WB_PACKAGE_NAME.story.common.bean.wrapper.StoryListWrapper")
-                .method("toList")
-                .hook(callbackEmptyList)
-    }
-
     fun hookComment(lpparam: XC_LoadPackage.LoadPackageParam) {
         lpparam.find("$WB_PACKAGE_NAME.models.JsonCommentMessageList")
                 .method("getCommentMessageList")
@@ -280,12 +285,34 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
         hookAD(lpparam)
         hookGreyScale(lpparam)
 
-        if (Settings.force_browser) hookBrowser()
+        hookBrowser()
         hookMoreItems(lpparam)
 
-        if (Settings.no_story) hookStory(lpparam)
-
         hookComment(lpparam)
+        hookReload(lpparam)
+    }
+
+    private fun hookReload(lpparam: XC_LoadPackage.LoadPackageParam) {
+        val cls = lpparam.find("$WB_PACKAGE_NAME.MainTabActivity")
+        cls.method("onCreate", Bundle::class.java).hook {
+            after {
+                val activity = it.thisObject as Activity
+                receiver = object: BroadcastReceiver() {
+                    override fun onReceive(p0: Context?, p1: Intent?) {
+                        log("Got reload command")
+                        reloadPrefs()
+                    }
+                }
+                activity.registerReceiver(receiver, IntentFilter(BROADCAST))
+            }
+        }
+
+        cls.method("onDestroy").hook {
+            after {
+                val activity = it.thisObject as Activity
+                receiver ?: activity.unregisterReceiver(receiver)
+            }
+        }
     }
 
     object Settings : Preferences() {
@@ -305,14 +332,20 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
         val comment_filters by stringSetPref(null, setOf("2", "3", "4", "5", "6"))
     }
 
+    private fun initPref() {
+        if (!Preferences.checkInit()) {
+            val activityThread = XposedHelpers.callStaticMethod(
+                    XposedHelpers.findClass("android.app.ActivityThread", null), "currentActivityThread")
+            val context = XposedHelpers.callMethod(activityThread, "getSystemContext") as Context
+            Preferences.init(context)
+        }
+    }
+
     private fun reloadPrefs(): Boolean {
-
-        val activityThread = XposedHelpers.callStaticMethod(
-                XposedHelpers.findClass("android.app.ActivityThread", null), "currentActivityThread")
-        val systemCtx = XposedHelpers.callMethod(activityThread, "getSystemContext") as Context
-        Preferences.init(systemCtx)
-
+        initPref()
         debug_mode = Settings.debug_mode
+        force_browser = Settings.force_browser
+        no_story = Settings.no_story
 
         if (!Settings.global_enabled) {
             return false
