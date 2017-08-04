@@ -166,8 +166,7 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
 
     private fun hookGreyScale(lpparam: XC_LoadPackage.LoadPackageParam) {
         lpparam.find("$WB_PACKAGE_NAME.utils.GreyScaleUtils")
-                .method("isFeatureEnabled", String::class.java)
-                .hook {
+                .hookAll("isFeatureEnabled") {
                     before {
                         val feature = it.args[0] as String
 
@@ -187,8 +186,8 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                 .method("startActivityForResult", Intent::class.java,
                         Int::class.javaPrimitiveType!!,
                         Bundle::class.java)
-                .hook(object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
+                .hook {
+                    before(fun(param: XC_MethodHook.MethodHookParam) {
                         if (!force_browser) return
                         val intent = param.args[0] as Intent
                         if (intent.getBooleanExtra(MOD_PACKAGE_NAME, false)) {
@@ -225,8 +224,8 @@ class Module : IXposedHookInitPackageResources, IXposedHookLoadPackage {
                             return
                         param.result = null
                         openUrl(url)
-                    }
-                })
+                    })
+                }
         logd("Hooked external browser.")
     }
 

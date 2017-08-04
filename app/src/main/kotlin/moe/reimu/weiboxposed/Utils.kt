@@ -13,6 +13,10 @@ fun Class<*>.method(name: String, vararg types: Class<*>): Method {
     return XposedHelpers.findMethodBestMatch(this, name, *types)
 }
 
+fun Class<*>.hookAll(name: String, body: HookBuilder.() -> Unit): Set<XC_MethodHook.Unhook> {
+    return XposedBridge.hookAllMethods(this, name, HookBuilder(body).build())
+}
+
 fun Method.hook(body: HookBuilder.() -> Unit) : XC_MethodHook.Unhook {
     return XposedBridge.hookMethod(this, HookBuilder(body).build())
 }
